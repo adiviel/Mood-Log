@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mood Logger</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --text: #000000;
+      --button: #dddddd;
+      --highlight: #88ccff;
+    }
+    body.dark {
+      --bg: #000000;
+      --text: #f0f0f0;
+      --button: #333333;
+      --highlight: #5599ff;
+    }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: sans-serif;
+      max-width: 512px;
+      margin: auto;
+      padding: 1em;
+    }
+    button, select, textarea {
+      background-color: var(--button);
+      color: var(--text);
+      border: none;
+      margin: 2px;
+      padding: 4px 8px;
+      cursor: pointer;
+    }
+    .selected {
+      background-color: var(--highlight);
+    }
+    .tags-section { display: none; }
+    .tags-section.open { display: block; }
+    .wrap { white-space: pre-wrap; width: 100%; height: 6em; }
+    .emoji { font-size: 1.5em; cursor: pointer; }
+    .emoji.selected { outline: 2px solid var(--highlight); }
+    .fold-toggle { cursor: pointer; text-decoration: underline; }
+    textarea { width: 100%; box-sizing: border-box; }
+  </style>
+</head>
+<body>
+  <h2>Mood Logger</h2>
+
+  <label>Date:
+    <input type="date" id="entry-date">
+    <button onclick="setToday()">Today</button>
+  </label>
+  <br/>
+
+  <label>Load Entry:
+    <select id="recent-entries" onchange="loadSelectedEntry()"></select>
+  </label>
+  <br/><br/>
+
+  <label>Mood:
+    <span id="mood-options"></span>
+  </label><br/><br/>
+
+  <div>
+    <span class="fold-toggle" onclick="toggleFold('tags')">▶ Tags</span>
+    <div id="tags" class="tags-section"></div>
+  </div>
+  <br/>
+
+  <label>Comments (max 500 chars):<br/>
+    <textarea id="freetext" maxlength="500"></textarea>
+  </label>
+  <br/><br/>
+
+  <div>
+    <button onclick="clearForm()">Clear Form</button>
+    <button onclick="saveEntry()">Save</button>
+    <button onclick="deleteEntry()">Delete</button>
+  </div>
+  <hr/>
+
+  <div>
+    <button onclick="shareWeek()">Share My Week</button>
+    <button onclick="exportCSV()">Export CSV</button>
+    <br>
+    <label for="import-csv-file">Import Mood Log:</label>
+    <input id="import-csv-file" type="file" accept=".csv" onchange="importCSV(event)">
+  </div>
+  <hr/>
+
+  <div>
+    <label>
+      <input type="checkbox" id="dark-mode-toggle" onchange="toggleTheme()"> Dark Mode
+    </label>
+  </div>
+
+  <div>
+    <span class="fold-toggle" onclick="toggleFold('settings')">▶ Edit Tag Options</span>
+    <div id="settings" class="tags-section">
+      <div id="options-editor"></div>
+      <button onclick="saveOptions()">Save Options</button>
+      <button onclick="exportOptions()">Export Options</button>
+      <br>
+      <label for="import-options-file">Import Options:</label>
+      <input id="import-options-file" type="file" accept=".csv" onchange="importOptions(event)">    </div>
+  </div>
+
+  <script>
+const emojiMap = {
+  '-2': '🟥',
+  '-1': '🟧',
+  '0': '⬜',
+  '1': '🟨',
+  '2': '🟩'
+};
+    const fields = ["Emotions", "Basics", "Good Habits", "Bad Habits", "Symptoms", "Skills"];
+    const optionsKey = "options.csv";
+    const logKey = "mood log.csv";
+    const maxDays = 14;
+
+    let options = {};
+    let moodValue = null;
+
+function setToday() {
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0'); // Months are 0-based
+  const dd = String(today.getDate()).padStart(2, '0');
+  const localDate = `${yyyy}-${mm}-${dd}`;
+  document.getElementById("entry-date").value = localDate;
+  loadEntry();
+}
+
+    function toggleFold(id) {
+      const el = document.getElementById(id);
+      el.classList.toggle("open");
+    }
+
+function buildMoodSelector() {
+  const container = document.getElementById("mood-options");
+  container.innerHTML = "";
+
+  // Create mood buttons
+  for (let i = -2; i <= 2; i++) {
+    const btn = document.createElement("button");
+    btn.textContent = emojiMap[i];
+    if (moodValue === i) btn.classList.add("selected");
+    btn.addEventListener("click", () => {
+      if (moodValue === i) moodValue = null;
+      else moodValue = i;
+      buildMoodSelector();
+    });
+    container.appendChild(btn);
+  }
+
+  // Add Clear Mood button here:
+  const clearBtn = document.createElement("button");
+  clearBtn.textContent = "Clear Mood";
+  clearBtn.addEventListener("click", () => {
+    moodValue = null;
+    buildMoodSelector();
+  });
+  container.appendChild(clearBtn);
+}
+
+function buildTags() {
+  const tags = document.getElementById("tags");
+  tags.innerHTML = "";
+  fields.forEach(field => {
+    const div = document.createElement("div");
+
+    // Create header container for label and clear button
+    const header = document.createElement("div");
+    header.style.display = "flex";
+    header.style.alignItems = "center";
+    header.style.gap = "1em";  // space between label and button
+
+    const label = document.createElement("label");
+    label.textContent = field;
+
+    const clear = document.createElement("button");
+    clear.textContent = "Clear";
+    clear.onclick = () => {
+      div.querySelectorAll("button.option").forEach(b => b.classList.remove("selected"));
+    };
+
+    header.appendChild(label);
+    header.appendChild(clear);
+    div.appendChild(header);
+
+    // Container for tag buttons, force line break after header
+    const buttonsContainer = document.createElement("div");
+    buttonsContainer.style.marginTop = "0.25em";  // small spacing after header
+
+    (options[field] || []).forEach(opt => {
+      const btn = document.createElement("button");
+      btn.className = "option";
+      btn.textContent = opt;
+      btn.onclick = () => btn.classList.toggle("selected");
+      buttonsContainer.appendChild(btn);
+    });
+
+    div.appendChild(buttonsContainer);
+
+    // Add bottom margin to separate blocks
+    div.style.marginBottom = "1em";
+
+    tags.appendChild(div);
+  });
+}
+
+    function collectTags() {
+      const out = {};
+      fields.forEach(field => {
+        const div = [...document.querySelectorAll("#tags div")].find(d => d.querySelector("label")?.textContent === field);
+        out[field] = [...div.querySelectorAll("button.option.selected")].map(b => b.textContent).join(", ");
+      });
+      return out;
+    }
+
+function clearForm() {
+  document.getElementById("freetext").value = "";
+  document.querySelectorAll("button.option").forEach(b => b.classList.remove("selected"));
+  moodValue = null;
+  buildMoodSelector();
+}
+
+    function saveEntry() {
+      const date = document.getElementById("entry-date").value;
+      if (!date) return alert("Choose a date.");
+      const tags = collectTags();
+      const comment = document.getElementById("freetext").value;
+      if (comment.length > 500) return alert("Comment too long");
+
+      let rows = getCSV(logKey);
+      rows = rows.filter(r => r[0] !== date);
+      const moodToSave = (moodValue === null) ? "" : moodValue;
+      const newRow = [
+        date, moodToSave,
+        ...fields.map(f => tags[f] || ""),
+        comment
+      ];
+
+      rows.push(newRow);
+      saveCSV(logKey, rows);
+      loadRecent();
+      clearForm();
+    }
+
+    function loadRecent() {
+      const sel = document.getElementById("recent-entries");
+      sel.innerHTML = `<option value="">--select--</option>`;
+      const rows = getCSV(logKey);
+      const today = new Date();
+      rows
+        .filter(r => {
+          const d = new Date(r[0]);
+          return today - d <= maxDays * 864e5;
+        })
+        .sort((a,b) => new Date(b[0]) - new Date(a[0]))
+        .forEach(r => {
+          const opt = document.createElement("option");
+          opt.value = r[0];
+          opt.textContent = r[0];
+          sel.appendChild(opt);
+        });
+    }
+
+    function loadSelectedEntry() {
+      const date = document.getElementById("recent-entries").value;
+      document.getElementById("entry-date").value = date;
+      loadEntry();
+    }
+
+function loadEntry() {
+  const date = document.getElementById("entry-date").value;
+  const rows = getCSV(logKey);
+  const entry = rows.find(r => r[0] === date);
+  if (!entry) return clearForm();
+
+  const mvRaw = entry[1];
+  moodValue = (mvRaw === "" || mvRaw === null || mvRaw === undefined) ? null : Number(mvRaw);
+
+  buildMoodSelector();
+
+  fields.forEach((field, i) => {
+    const div = [...document.querySelectorAll("#tags div")].find(d => d.querySelector("label")?.textContent === field);
+    div.querySelectorAll("button.option").forEach(b => b.classList.remove("selected"));
+    const vals = (entry[i + 2] || "").split(", ").filter(Boolean);
+    vals.forEach(val => {
+      const btn = [...div.querySelectorAll("button.option")].find(b => b.textContent === val);
+      if (btn) btn.classList.add("selected");
+    });
+  });
+
+const allTags = Object.values(options).flat();
+const lastField = entry[entry.length - 1];
+document.getElementById("freetext").value = allTags.includes(lastField) ? "" : lastField;
+}
+
+    function deleteEntry() {
+      const date = document.getElementById("entry-date").value;
+      let rows = getCSV(logKey);
+      rows = rows.filter(r => r[0] !== date);
+      saveCSV(logKey, rows);
+      loadRecent();
+      clearForm();
+    }
+
+function shareWeek() {
+  const today = new Date();
+  const rows = getCSV(logKey);
+  let result = "";
+
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    // Format date as YYYY-MM-DD to match your CSV
+    const dateStr = d.toISOString().slice(0, 10);
+
+    const entry = rows.find(r => r[0] === dateStr);
+    if (entry) {
+      const moodRaw = entry[1];
+      const moodNum = (moodRaw === "" || moodRaw == null) ? null : Number(moodRaw);
+      result += moodNum !== null ? emojiMap[moodNum] : "⬛";
+    } else {
+      result += "⬛";
+    }
+  }
+
+  navigator.clipboard.writeText(result);
+  alert("Last 7 days mood copied:\n" + result);
+}
+
+    function getCSV(key) {
+      const data = localStorage.getItem(key);
+      return data ? data.trim().split("\n").map(r => r.split("\t")) : [];
+    }
+
+    function saveCSV(key, rows) {
+      const data = rows.map(r => r.join("\t")).join("\n");
+      localStorage.setItem(key, data);
+    }
+
+function init() {
+  // Set default options if none exist
+  if (!localStorage.getItem(optionsKey)) {
+    const defaultOptions = `Emotions\tBasics\tGood Habits\tBad Habits\tNegative Symptoms\tDBT Skills
+Love\tWork\tHealthyMeal\tJunkFood\tInsomnia\tWiseMind
+Joy\tSchool\tHydration\tSubstanceUse\tPain\tObserve
+Fear\tHobby\tSleepHygiene\tAlcohol\tFatigue\tDescribe
+Anger\tPaperwork\tExercise\tNicotine\tSuicidalIdeation\tParticipate
+Sadness\tHousework\tShower\tMarijuana\tMenstruation\tOneMindfully
+Surprise\tErrands\tOralCare\tCaffeine\tBrainFog\tNonJudgmentally
+Happy\tFriends\tHairCare\tGambling\tAllergy\tEffectively
+Content\tFamily\tSkinCare\tBingeEating\tInfection\tRadicalAcceptance
+Excited\tSignificantOther\t\tSelfHarm\tStomachUpset\tTurningTheMind
+Hopeful\tDoctor\t\tPornography\t\tTIPP
+Grateful\tTherapist\t\tSocialMedia\t\tSTOP
+Affectionate\t\t\tSleepSabotage\t\tSensorySelfSoothe
+Anxious\t\t\t\t\tOppositeToEmotionAction
+Nervous\t\t\t\t\tACCEPTS
+Scared\t\t\t\t\tIMPROVE
+Frustrated\t\t\t\t\tProsAndCons
+Annoyed\t\t\t\t\tDEARMAN
+Angry\t\t\t\t\tGIVE
+Jealous\t\t\t\t\tFAST
+Lonely\t\t\t\t\tPLEASE
+Hurt\t\t\t\t\tClarifyValues
+Disappointed\t\t\t\t\tClarifyGoals
+Guilty\t\t\t\t\tAccumulatePositiveExperiences
+Ashamed\t\t\t\t\tCheckTheFacts
+Surprised\t\t\t\t\tBuildMastery
+Confused\t\t\t\t\tBehaviorChainAnalysis
+Overwhelmed\t\t\t\t\t`.replace(/\\t/g, "\t").trim();
+
+localStorage.setItem(optionsKey, defaultOptions);
+
+  }
+
+  // These were in the first init()
+  loadOptions();
+  loadRecent();
+  buildMoodSelector();
+  buildOptionsEditor();
+}
+
+    function loadOptions() {
+    const raw = getCSV(optionsKey);
+    options = {};
+    // Skip header row:
+    const dataRows = raw.slice(1);
+    fields.forEach((field, i) => {
+        options[field] = dataRows.map(r => r[i]).filter(Boolean);
+    });
+    buildTags();
+    }
+
+
+    function buildOptionsEditor() {
+      const editor = document.getElementById("options-editor");
+      editor.innerHTML = "";
+      fields.forEach((field, i) => {
+        const box = document.createElement("textarea");
+        box.className = "wrap";
+        box.dataset.col = i;
+        box.value = (options[field] || []).join("\n");
+        const label = document.createElement("label");
+        label.textContent = field;
+        editor.appendChild(label);
+        editor.appendChild(box);
+      });
+    }
+
+    function saveOptions() {
+      const boxes = document.querySelectorAll("#options-editor textarea");
+      const rows = [];
+      const lines = Array.from(boxes).map(b => b.value.split("\n"));
+      const max = Math.max(...lines.map(a => a.length));
+      for (let i = 0; i < max; i++) {
+        rows.push(lines.map(col => col[i] || ""));
+      }
+      saveCSV(optionsKey, rows);
+      loadOptions();
+    }
+
+    function exportCSV() {
+      const rows = getCSV(logKey);
+      const blob = new Blob([rows.map(r => r.join("\t")).join("\n")], { type: "text/tab-separated-values" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = logKey;
+      a.click();
+    }
+
+    function importCSV(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = evt => {
+        localStorage.setItem(logKey, evt.target.result);
+        loadRecent();
+      };
+      reader.readAsText(file);
+    }
+
+    function exportOptions() {
+      const rows = getCSV(optionsKey);
+      const blob = new Blob([rows.map(r => r.join("\t")).join("\n")], { type: "text/tab-separated-values" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = optionsKey;
+      a.click();
+    }
+
+    function importOptions(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = evt => {
+        localStorage.setItem(optionsKey, evt.target.result);
+        loadOptions();
+        buildOptionsEditor();
+      };
+      reader.readAsText(file);
+    }
+
+function toggleTheme() {
+  const checkbox = document.getElementById("dark-mode-toggle");
+  if (checkbox.checked) {
+    document.body.classList.add("dark");
+    localStorage.setItem("darkMode", "true");
+  } else {
+    document.body.classList.remove("dark");
+    localStorage.setItem("darkMode", "false");
+  }
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  const darkMode = localStorage.getItem("darkMode");
+  const checkbox = document.getElementById("dark-mode-toggle");
+  if (darkMode === "true") {
+    document.body.classList.add("dark");
+    if (checkbox) checkbox.checked = true;
+  } else {
+    document.body.classList.remove("dark");
+    if (checkbox) checkbox.checked = false;
+  }
+});
+
+window.addEventListener("DOMContentLoaded", init);
+  </script>
+</body>
+</html>

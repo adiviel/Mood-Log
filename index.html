@@ -115,7 +115,7 @@ const emojiMap = {
   '1': '🟨',
   '2': '🟩'
 };
-    const fields = ["Emotions", "Basics", "Good Habits", "Bad Habits", "Symptoms", "Skills"];
+    const fields = ["Emotions", "Life", "Good Habits", "Bad Habits", "Symptoms", "Skills"];
     const optionsKey = "options.csv";
     const logKey = "mood log.csv";
     const maxDays = 14;
@@ -347,7 +347,7 @@ function shareWeek() {
 function init() {
   // Set default options if none exist
   if (!localStorage.getItem(optionsKey)) {
-    const defaultOptions = `Emotions\tBasics\tGood Habits\tBad Habits\tNegative Symptoms\tDBT Skills
+    const defaultOptions = `Emotions\tLife\tGood Habits\tBad Habits\tNegative Symptoms\tDBT Skills
 Love\tWork\tHealthyMeal\tJunkFood\tInsomnia\tWiseMind
 Joy\tSchool\tHydration\tSubstanceUse\tPain\tObserve
 Fear\tHobby\tSleepHygiene\tAlcohol\tFatigue\tDescribe

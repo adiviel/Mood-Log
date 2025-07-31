@@ -359,7 +359,7 @@ function shareWeek() {
     const d = new Date(today);
     d.setDate(today.getDate() - i);
     // Format date as YYYY-MM-DD to match your CSV
-    const dateStr = d.toISOString().slice(0, 10);
+    const dateStr = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
 
     const entry = rows.find(r => r[0] === dateStr);
     if (entry) {

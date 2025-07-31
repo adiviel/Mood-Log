@@ -215,14 +215,13 @@ function buildMoodSelector() {
 function buildTags() {
   const tags = document.getElementById("tags");
   tags.innerHTML = "";
-  fields.forEach(field => {
+  Object.keys(options).forEach(field => {
     const div = document.createElement("div");
 
-    // Create header container for label and clear button
     const header = document.createElement("div");
     header.style.display = "flex";
     header.style.alignItems = "center";
-    header.style.gap = "1em";  // space between label and button
+    header.style.gap = "1em";
 
     const label = document.createElement("label");
     label.textContent = field;
@@ -237,9 +236,8 @@ function buildTags() {
     header.appendChild(clear);
     div.appendChild(header);
 
-    // Container for tag buttons, force line break after header
     const buttonsContainer = document.createElement("div");
-    buttonsContainer.style.marginTop = "0.25em";  // small spacing after header
+    buttonsContainer.style.marginTop = "0.25em";
 
     (options[field] || []).forEach(opt => {
       const btn = document.createElement("button");
@@ -250,13 +248,12 @@ function buildTags() {
     });
 
     div.appendChild(buttonsContainer);
-
-    // Add bottom margin to separate blocks
     div.style.marginBottom = "1em";
 
     tags.appendChild(div);
   });
 }
+
 
     function collectTags() {
       const out = {};
@@ -425,86 +422,78 @@ function shareDetailedWeek() {
     }
 
 function init() {
-  // Set default options if none exist
   if (!localStorage.getItem(optionsKey)) {
-    const defaultOptions = `Emotions\tLife\tGood Habits\tBad Habits\tNegative Symptoms\tDBT Skills
-Love\tWork\tHealthyMeal\tJunkFood\tInsomnia\tWiseMind
-Joy\tSchool\tHydration\tSubstanceUse\tPain\tObserve
-Fear\tHobby\tSleepHygiene\tAlcohol\tFatigue\tDescribe
-Anger\tPaperwork\tExercise\tNicotine\tSuicidalIdeation\tParticipate
-Sadness\tHousework\tShower\tMarijuana\tMenstruation\tOneMindfully
-Surprise\tErrands\tOralCare\tCaffeine\tBrainFog\tNonJudgmentally
-Happy\tFriends\tHairCare\tGambling\tAllergy\tEffectively
-Content\tFamily\tSkinCare\tBingeEating\tInfection\tRadicalAcceptance
-Excited\tSignificantOther\t\tSelfHarm\tStomachUpset\tTurningTheMind
-Hopeful\tDoctor\t\tPornography\t\tTIPP
-Grateful\tTherapist\t\tSocialMedia\t\tSTOP
-Affectionate\t\t\tSleepSabotage\t\tSensorySelfSoothe
-Anxious\t\t\t\t\tOppositeToEmotionAction
-Nervous\t\t\t\t\tACCEPTS
-Scared\t\t\t\t\tIMPROVE
-Frustrated\t\t\t\t\tProsAndCons
-Annoyed\t\t\t\t\tDEARMAN
-Angry\t\t\t\t\tGIVE
-Jealous\t\t\t\t\tFAST
-Lonely\t\t\t\t\tPLEASE
-Hurt\t\t\t\t\tClarifyValues
-Disappointed\t\t\t\t\tClarifyGoals
-Guilty\t\t\t\t\tAccumulatePositives
-Ashamed\t\t\t\t\tCheckTheFacts
-Surprised\t\t\t\t\tBuildMastery
-Confused\t\t\t\t\tBehaviorChainAnalysis
-Overwhelmed\t\t\t\t\t`.replace(/\\t/g, "\t").trim();
-
-localStorage.setItem(optionsKey, defaultOptions);
-
+    const defaultOptions = {
+      "Emotions": [
+        "Love", "Joy", "Fear", "Anger", "Sadness", "Surprise", "Happy", "Content", "Excited", "Hopeful",
+        "Grateful", "Affectionate", "Anxious", "Nervous", "Scared", "Frustrated", "Annoyed", "Angry", "Jealous",
+        "Lonely", "Hurt", "Disappointed", "Guilty", "Ashamed", "Surprised", "Confused", "Overwhelmed"
+      ],
+      "Life": [
+        "Work", "School", "Hobby", "Paperwork", "Housework", "Errands", "Friends", "Family",
+        "SignificantOther", "Doctor", "Therapist"
+      ],
+      "Good Habits": [
+        "HealthyMeal", "Hydration", "SleepHygiene", "Exercise", "Shower", "OralCare",
+        "HairCare", "SkinCare"
+      ],
+      "Bad Habits": [
+        "JunkFood", "SubstanceUse", "Alcohol", "Nicotine", "Marijuana", "Caffeine", "Gambling",
+        "BingeEating", "SelfHarm", "Pornography", "SocialMedia", "SleepSabotage"
+      ],
+      "Negative Symptoms": [
+        "Insomnia", "Pain", "Fatigue", "SuicidalIdeation", "Menstruation", "BrainFog",
+        "Allergy", "Infection", "StomachUpset"
+      ],
+      "DBT Skills": [
+        "WiseMind", "Observe", "Describe", "Participate", "OneMindfully", "NonJudgmentally",
+        "Effectively", "RadicalAcceptance", "TurningTheMind", "TIPP", "STOP", "SensorySelfSoothe",
+        "OppositeToEmotionAction", "ACCEPTS", "IMPROVE", "ProsAndCons", "DEARMAN", "GIVE",
+        "FAST", "PLEASE", "ClarifyValues", "ClarifyGoals", "AccumulatePositives", "CheckTheFacts",
+        "BuildMastery", "BehaviorChainAnalysis"
+      ]
+    };
+    localStorage.setItem(optionsKey, JSON.stringify(defaultOptions));
   }
 
-  // These were in the first init()
   loadOptions();
   loadRecent();
   buildMoodSelector();
   buildOptionsEditor();
 }
 
-    function loadOptions() {
-    const raw = getCSV(optionsKey);
-    options = {};
-    // Skip header row:
-    const dataRows = raw.slice(1);
-    fields.forEach((field, i) => {
-        options[field] = dataRows.map(r => r[i]).filter(Boolean);
-    });
-    buildTags();
-    }
 
+function loadOptions() {
+  options = JSON.parse(localStorage.getItem(optionsKey)) || {};
+  buildTags();
+}
 
-    function buildOptionsEditor() {
-      const editor = document.getElementById("options-editor");
-      editor.innerHTML = "";
-      fields.forEach((field, i) => {
-        const box = document.createElement("textarea");
-        box.className = "wrap";
-        box.dataset.col = i;
-        box.value = (options[field] || []).join("\n");
-        const label = document.createElement("label");
-        label.textContent = field;
-        editor.appendChild(label);
-        editor.appendChild(box);
-      });
-    }
+function buildOptionsEditor() {
+  const editor = document.getElementById("options-editor");
+  editor.innerHTML = "";
+  Object.entries(options).forEach(([field, values]) => {
+    const label = document.createElement("label");
+    label.textContent = field;
+    const box = document.createElement("textarea");
+    box.className = "wrap";
+    box.dataset.field = field;
+    box.value = values.join("\n");
+    editor.appendChild(label);
+    editor.appendChild(box);
+  });
+}
 
-    function saveOptions() {
-      const boxes = document.querySelectorAll("#options-editor textarea");
-      const rows = [];
-      const lines = Array.from(boxes).map(b => b.value.split("\n"));
-      const max = Math.max(...lines.map(a => a.length));
-      for (let i = 0; i < max; i++) {
-        rows.push(lines.map(col => col[i] || ""));
-      }
-      saveCSV(optionsKey, rows);
-      loadOptions();
-    }
+function saveOptions() {
+  const boxes = document.querySelectorAll("#options-editor textarea");
+  const updated = {};
+  boxes.forEach(box => {
+    const field = box.dataset.field;
+    updated[field] = box.value.split("\n").map(s => s.trim()).filter(Boolean);
+  });
+  localStorage.setItem(optionsKey, JSON.stringify(updated));
+  loadOptions();
+  buildOptionsEditor();
+}
 
     function exportCSV() {
       const rows = getCSV(logKey);
@@ -526,26 +515,30 @@ localStorage.setItem(optionsKey, defaultOptions);
       reader.readAsText(file);
     }
 
-    function exportOptions() {
-      const rows = getCSV(optionsKey);
-      const blob = new Blob([rows.map(r => r.join("\t")).join("\n")], { type: "text/tab-separated-values" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = optionsKey;
-      a.click();
-    }
+function exportOptions() {
+  const blob = new Blob([JSON.stringify(options, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "options.json";
+  a.click();
+}
 
-    function importOptions(e) {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = evt => {
-        localStorage.setItem(optionsKey, evt.target.result);
-        loadOptions();
-        buildOptionsEditor();
-      };
-      reader.readAsText(file);
+function importOptions(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = evt => {
+    try {
+      const parsed = JSON.parse(evt.target.result);
+      localStorage.setItem(optionsKey, JSON.stringify(parsed));
+      loadOptions();
+      buildOptionsEditor();
+    } catch (err) {
+      alert("Invalid JSON");
     }
+  };
+  reader.readAsText(file);
+}
 
 function toggleTheme() {
   const checkbox = document.getElementById("dark-mode-toggle");

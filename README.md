@@ -10,4 +10,5 @@ Current Bugs / Limitations:
 - if you delete tag options you previously used then attempt to edit a previous entry without that tag as one of your options, it will (probably) erase that tag from your entry. And I'm not actually sure because I haven't specifically tested that.
 - dunno how to get the white square to render properly when exported regardless of pasted text color
 - if you don't put in a comment, it just pulls whatever the last column was whether thats a tag, the numerical mood value, or even the date.
+
 Everybody wish me luck I'm a fucking healthcare worker and this is not a bedpan!

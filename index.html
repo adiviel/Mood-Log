@@ -375,6 +375,39 @@ function shareWeek() {
   alert("Last 7 days mood copied:\n" + result);
 }
 
+    function shareDetailedWeek() {
+  const today = new Date();
+  const rows = getCSV(logKey);
+  let result = "";
+
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const dateStr = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
+    const displayDate = `${(d.getMonth() + 1)}/${d.getDate()}`; // e.g., 7/30
+
+    const entry = rows.find(r => r[0] === dateStr);
+    const moodEmoji = entry && entry[1] !== "" ? emojiMap[entry[1]] || "⬛" : "⬛";
+
+    // Extract tags (fields are emotions, basics, good habits, bad habits, negative symptoms, DBT skills)
+    let tagString = "";
+    if (entry) {
+      const tags = entry.slice(2, entry.length - 1).filter(Boolean);
+      tagString = tags.join(", ");
+    }
+
+    // Extract comment (last field)
+    const comment = entry && entry.length > 1 ? entry[entry.length - 1] : "";
+
+    result += `# ${displayDate} ${moodEmoji}\n`;
+    result += `**Tags:** ${tagString}\n`;
+    result += `**Comments:** ${comment}\n\n`;
+  }
+
+  navigator.clipboard.writeText(result.trim());
+  alert("Detailed mood log copied:\n\n" + result.trim());
+}
+
     function getCSV(key) {
       const data = localStorage.getItem(key);
       return data ? data.trim().split("\n").map(r => r.split("\t")) : [];
@@ -411,7 +444,7 @@ Jealous\t\t\t\t\tFAST
 Lonely\t\t\t\t\tPLEASE
 Hurt\t\t\t\t\tClarifyValues
 Disappointed\t\t\t\t\tClarifyGoals
-Guilty\t\t\t\t\tAccumulatePositiveExperiences
+Guilty\t\t\t\t\tAccumulatePositives
 Ashamed\t\t\t\t\tCheckTheFacts
 Surprised\t\t\t\t\tBuildMastery
 Confused\t\t\t\t\tBehaviorChainAnalysis

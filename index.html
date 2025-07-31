@@ -156,20 +156,26 @@ function buildMoodSelector() {
   const container = document.getElementById("mood-options");
   container.innerHTML = "";
 
-  // Create mood buttons
   for (let i = -2; i <= 2; i++) {
     const btn = document.createElement("button");
-    btn.textContent = emojiMap[i];
+    btn.className = "emoji";
+    btn.dataset.value = i;
+    btn.style.backgroundColor = moodColors[i];
+    btn.style.width = "40px";
+    btn.style.height = "40px";
+    btn.style.margin = "5px";
+    btn.style.border = "none";
+
     if (moodValue === i) btn.classList.add("selected");
+
     btn.addEventListener("click", () => {
-      if (moodValue === i) moodValue = null;
-      else moodValue = i;
+      moodValue = i;
       buildMoodSelector();
     });
+
     container.appendChild(btn);
   }
 
-  // Add Clear Mood button here:
   const clearBtn = document.createElement("button");
   clearBtn.textContent = "Clear Mood";
   clearBtn.addEventListener("click", () => {

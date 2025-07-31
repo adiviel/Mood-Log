@@ -89,7 +89,9 @@
   <hr/>
 
   <div>
-    <button onclick="shareWeek()">Share My Week</button>
+    <button onclick="shareWeek()">Share Basic Week</button>
+    <button onclick="shareDetailedWeek()">Share Detailed Week</button>
+    <br>
     <button onclick="exportCSV()">Export CSV</button>
     <br>
     <label for="import-csv-file">Import Mood Log:</label>
@@ -375,7 +377,7 @@ function shareWeek() {
   alert("Last 7 days mood copied:\n" + result);
 }
 
-    function shareDetailedWeek() {
+function shareDetailedWeek() {
   const today = new Date();
   const rows = getCSV(logKey);
   let result = "";

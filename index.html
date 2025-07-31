@@ -156,14 +156,10 @@ function buildMoodSelector() {
   const container = document.getElementById("mood-options");
   container.innerHTML = "";
 
-  // Add Mood: label
-  const label = document.createElement("div");
-  label.textContent = "Mood:";
-  label.style.marginBottom = "0.25em";
-  label.style.fontWeight = "bold";
-  container.appendChild(label);
+  // Remove duplicate "Mood:" label (assumes one already exists in HTML)
+  // So we skip adding one here
 
-  // Row of mood buttons
+  // Mood button row
   const buttonRow = document.createElement("div");
   buttonRow.style.display = "flex";
   buttonRow.style.gap = "8px";
@@ -176,14 +172,14 @@ function buildMoodSelector() {
     btn.style.backgroundColor = moodColors[i];
     btn.style.width = "32px";
     btn.style.height = "32px";
-    btn.style.border = "2px solid transparent";
+    btn.style.border = "1px solid #666"; // ← gives white button a border in light mode
     btn.style.borderRadius = "4px";
     btn.style.padding = "0";
     btn.style.flexShrink = "0";
 
     if (moodValue === i) {
       btn.classList.add("selected");
-      btn.style.borderColor = "var(--highlight)";
+      btn.style.outline = "2px solid var(--highlight)";
     }
 
     btn.addEventListener("click", (e) => {
@@ -197,10 +193,10 @@ function buildMoodSelector() {
 
   container.appendChild(buttonRow);
 
-  // Clear Mood button on its own line
+  // Clear Mood button
   const clearBtn = document.createElement("button");
   clearBtn.textContent = "Clear Mood";
-  clearBtn.style.display = "block";
+  clearBtn.style.marginBottom = "0.5em"; // ← reduce vertical gap
   clearBtn.addEventListener("click", (e) => {
     e.preventDefault();
     moodValue = null;
@@ -209,7 +205,6 @@ function buildMoodSelector() {
 
   container.appendChild(clearBtn);
 }
-
 
 function buildTags() {
   const tags = document.getElementById("tags");

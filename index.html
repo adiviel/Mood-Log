@@ -286,7 +286,10 @@ function collectTags() {
   const out = {};
   Object.keys(options).forEach(field => {
     const div = document.querySelector(`#tags div[data-field="${field}"]`);
-    if (!div) return;  // fail-safe
+    if (!div) {
+      console.warn(`Missing tag container for field: ${field}`);
+      return;
+    }
     const selected = div.querySelectorAll("button.option.selected");
     out[field] = Array.from(selected).map(b => b.textContent).join(", ");
   });

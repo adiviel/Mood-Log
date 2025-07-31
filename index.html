@@ -280,9 +280,12 @@ function buildTags(entryTags = {}) {
 
     tags.appendChild(div);
   });
+  console.log("Finished building tags.");
 }
 
 function collectTags() {
+    console.log("Running collectTags...");
+    console.log("Contents of #tags:", document.querySelector("#tags")?.innerHTML);
   const out = {};
   Object.keys(options).forEach(field => {
     const div = document.querySelector(`#tags div[data-field="${field}"]`);

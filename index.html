@@ -135,7 +135,15 @@
       '1': '🟨',
       '2': '🟩'
     };
-    const fields = ["Emotions", "Life", "Good Habits", "Bad Habits", "Symptoms", "Skills"];
+
+    let fields = [];
+
+function loadOptions() {
+  options = JSON.parse(localStorage.getItem(optionsKey)) || {};
+  fields = Object.keys(options);
+  buildTags();
+}
+
     const optionsKey = "options.csv";
     const logKey = "mood log.csv";
     const maxDays = 14;
@@ -212,11 +220,26 @@ function buildMoodSelector() {
   container.appendChild(clearBtn);
 }
 
-function buildTags() {
+function buildTags(entryTags = {}) {
   const tags = document.getElementById("tags");
   tags.innerHTML = "";
+
+  const labelMap = {
+    "emotions": "Emotions",
+    "life": "Life",
+    "goodhabits": "Good Habits",
+    "badhabits": "Bad Habits",
+    "symptoms": "Symptoms",
+    "skills": "Skills"
+  };
+
+  function normalizeKey(str) {
+    return str.toLowerCase().replace(/\s+/g, "");
+  }
+
   Object.keys(options).forEach(field => {
     const div = document.createElement("div");
+    div.dataset.field = field;
 
     const header = document.createElement("div");
     header.style.display = "flex";
@@ -224,7 +247,7 @@ function buildTags() {
     header.style.gap = "1em";
 
     const label = document.createElement("label");
-    label.textContent = field;
+    label.textContent = labelMap[normalizeKey(field)] || field;
 
     const clear = document.createElement("button");
     clear.textContent = "Clear";
@@ -239,10 +262,15 @@ function buildTags() {
     const buttonsContainer = document.createElement("div");
     buttonsContainer.style.marginTop = "0.25em";
 
-    (options[field] || []).forEach(opt => {
+    const known = new Set(options[field] || []);
+    const used = new Set((entryTags[field] || "").split(",").map(s => s.trim()).filter(Boolean));
+    const all = Array.from(new Set([...known, ...used]));
+
+    all.forEach(opt => {
       const btn = document.createElement("button");
       btn.className = "option";
       btn.textContent = opt;
+      if (used.has(opt)) btn.classList.add("selected");
       btn.onclick = () => btn.classList.toggle("selected");
       buttonsContainer.appendChild(btn);
     });
@@ -254,15 +282,16 @@ function buildTags() {
   });
 }
 
-
-    function collectTags() {
-      const out = {};
-      fields.forEach(field => {
-        const div = [...document.querySelectorAll("#tags div")].find(d => d.querySelector("label")?.textContent === field);
-        out[field] = [...div.querySelectorAll("button.option.selected")].map(b => b.textContent).join(", ");
-      });
-      return out;
-    }
+function collectTags() {
+  const out = {};
+  Object.keys(options).forEach(field => {
+    const div = document.querySelector(`#tags div[data-field="${field}"]`);
+    if (!div) return;  // fail-safe
+    const selected = div.querySelectorAll("button.option.selected");
+    out[field] = Array.from(selected).map(b => b.textContent).join(", ");
+  });
+  return out;
+}
 
 function clearForm() {
   document.getElementById("freetext").value = "";
@@ -271,27 +300,29 @@ function clearForm() {
   buildMoodSelector();
 }
 
-    function saveEntry() {
-      const date = document.getElementById("entry-date").value;
-      if (!date) return alert("Choose a date.");
-      const tags = collectTags();
-      const comment = document.getElementById("freetext").value;
-      if (comment.length > 500) return alert("Comment too long");
+function saveEntry() {
+  const date = document.getElementById("entry-date").value;
+  if (!date) return alert("Choose a date.");
+  const tags = collectTags();
+  const comment = document.getElementById("freetext").value;
+  if (comment.length > 500) return alert("Comment too long");
 
-      let rows = getCSV(logKey);
-      rows = rows.filter(r => r[0] !== date);
-      const moodToSave = (moodValue === null) ? "" : moodValue;
-      const newRow = [
-        date, moodToSave,
-        ...fields.map(f => tags[f] || ""),
-        comment
-      ];
+  let rows = getCSV(logKey);
+  rows = rows.filter(r => r[0] !== date);
+  const moodToSave = (moodValue === null) ? "" : moodValue;
+  const newRow = [
+    date,
+    moodToSave,
+    ...fields.map(f => tags[f] || ""),
+    comment
+  ];
 
-      rows.push(newRow);
-      saveCSV(logKey, rows);
-      loadRecent();
-      clearForm();
-    }
+  rows.push(newRow);
+  console.log("Saving row:", newRow);
+  saveCSV(logKey, rows);
+  loadRecent();
+  clearForm();
+}
 
     function loadRecent() {
       const sel = document.getElementById("recent-entries");
@@ -326,22 +357,17 @@ function loadEntry() {
 
   const mvRaw = entry[1];
   moodValue = (mvRaw === "" || mvRaw === null || mvRaw === undefined) ? null : Number(mvRaw);
-
   buildMoodSelector();
 
+  const tagValues = {};
   fields.forEach((field, i) => {
-    const div = [...document.querySelectorAll("#tags div")].find(d => d.querySelector("label")?.textContent === field);
-    div.querySelectorAll("button.option").forEach(b => b.classList.remove("selected"));
-    const vals = (entry[i + 2] || "").split(", ").filter(Boolean);
-    vals.forEach(val => {
-      const btn = [...div.querySelectorAll("button.option")].find(b => b.textContent === val);
-      if (btn) btn.classList.add("selected");
-    });
+    tagValues[field] = entry[i + 2] || "";
   });
 
-const allTags = Object.values(options).flat();
-const lastField = entry[entry.length - 1];
-document.getElementById("freetext").value = allTags.includes(lastField) ? "" : lastField;
+  buildTags(tagValues);
+
+  const possibleComment = entry[fields.length + 2] || "";
+  document.getElementById("freetext").value = possibleComment;
 }
 
     function deleteEntry() {
@@ -460,12 +486,6 @@ function init() {
   loadRecent();
   buildMoodSelector();
   buildOptionsEditor();
-}
-
-
-function loadOptions() {
-  options = JSON.parse(localStorage.getItem(optionsKey)) || {};
-  buildTags();
 }
 
 function buildOptionsEditor() {

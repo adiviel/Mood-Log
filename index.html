@@ -156,34 +156,60 @@ function buildMoodSelector() {
   const container = document.getElementById("mood-options");
   container.innerHTML = "";
 
+  // Add Mood: label
+  const label = document.createElement("div");
+  label.textContent = "Mood:";
+  label.style.marginBottom = "0.25em";
+  label.style.fontWeight = "bold";
+  container.appendChild(label);
+
+  // Row of mood buttons
+  const buttonRow = document.createElement("div");
+  buttonRow.style.display = "flex";
+  buttonRow.style.gap = "8px";
+  buttonRow.style.marginBottom = "0.5em";
+
   for (let i = -2; i <= 2; i++) {
     const btn = document.createElement("button");
     btn.className = "emoji";
     btn.dataset.value = i;
     btn.style.backgroundColor = moodColors[i];
-    btn.style.width = "40px";
-    btn.style.height = "40px";
-    btn.style.margin = "5px";
-    btn.style.border = "none";
+    btn.style.width = "32px";
+    btn.style.height = "32px";
+    btn.style.border = "2px solid transparent";
+    btn.style.borderRadius = "4px";
+    btn.style.padding = "0";
+    btn.style.flexShrink = "0";
 
-    if (moodValue === i) btn.classList.add("selected");
+    if (moodValue === i) {
+      btn.classList.add("selected");
+      btn.style.borderColor = "var(--highlight)";
+    }
 
-    btn.addEventListener("click", () => {
-      moodValue = i;
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      moodValue = (moodValue === i) ? null : i;
       buildMoodSelector();
     });
 
-    container.appendChild(btn);
+    buttonRow.appendChild(btn);
   }
 
+  container.appendChild(buttonRow);
+
+  // Clear Mood button on its own line
   const clearBtn = document.createElement("button");
   clearBtn.textContent = "Clear Mood";
-  clearBtn.addEventListener("click", () => {
+  clearBtn.style.display = "block";
+  clearBtn.addEventListener("click", (e) => {
+    e.preventDefault();
     moodValue = null;
     buildMoodSelector();
   });
+
   container.appendChild(clearBtn);
 }
+
 
 function buildTags() {
   const tags = document.getElementById("tags");

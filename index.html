@@ -419,20 +419,19 @@ function shareDetailedWeek() {
     const d = new Date(today);
     d.setDate(today.getDate() - i);
     const dateStr = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
-    const displayDate = `${(d.getMonth() + 1)}/${d.getDate()}`; // e.g., 7/30
+    const displayDate = `${(d.getMonth() + 1)}/${d.getDate()}`;
 
     const entry = rows.find(r => r[0] === dateStr);
     const moodEmoji = entry && entry[1] !== "" ? emojiMap[entry[1]] || "⬛" : "⬛";
 
-    // Extract tags (fields are emotions, basics, good habits, bad habits, negative symptoms, DBT skills)
     let tagString = "";
-    if (entry) {
-      const tags = entry.slice(2, entry.length - 1).filter(Boolean);
-      tagString = tags.join(", ");
-    }
+    let comment = "";
 
-    // Extract comment (last field)
-    const comment = entry && entry.length > 1 ? entry[entry.length - 1] : "";
+    if (entry) {
+      const tagValues = entry.slice(2, 2 + fields.length);
+      tagString = tagValues.filter(Boolean).join(", ");
+      comment = entry[2 + fields.length] || "";
+    }
 
     result += `# ${displayDate} ${moodEmoji}\n`;
     result += `**Tags:** ${tagString}\n`;
